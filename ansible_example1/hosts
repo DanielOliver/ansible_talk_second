@@ -1,0 +1,5 @@
+[DBServer]
+ansiblevm1 ansible_ssh_user=daniel ansible_host=ansiblevm1.eastus.cloudapp.azure.com
+[WebServers]
+ansiblevm2 ansible_ssh_user=daniel ansible_host=ansiblevm2.eastus.cloudapp.azure.com
+ansiblevm3 ansible_ssh_user=daniel ansible_host=ansiblevm3.eastus.cloudapp.azure.com

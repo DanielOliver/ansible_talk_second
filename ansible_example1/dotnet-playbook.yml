@@ -1,0 +1,29 @@
+---
+- hosts: ansiblevm1
+  tasks:
+
+  - name: Is Microsoft.gpg there?
+    stat: 
+      path: /etc/apt/trusted.gpg.d/microsoft.gpg
+    register: microsoft_gpg
+
+  - name: Download Microsoft GPG
+    command: bash -c "curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg"
+    when: microsoft_gpg.stat.exists == False
+      
+  - name: Microsoft Packages is in source list.
+    lineinfile:
+      path: /etc/apt/sources.list.d/dotnetdev.list
+      line: "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-xenial-prod xenial main"
+      state: present
+      create: yes
+
+  - name: Runs apt-get update, if last run more than one hour ago.
+    apt: 
+      update_cache: yes
+      cache_valid_time: 3600
+
+  - name: dotnet-sdk-2.1.4 is present.
+    apt:
+      name: dotnet-sdk-2.1.4
+      state: present

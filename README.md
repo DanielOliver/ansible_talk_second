@@ -1,0 +1,5 @@
+# An Introduction to Server Configuration and Provisioning with Ansible
+
+Some applications and environments just don't fit well into a web app or a Docker container, and not everyone is in the cloud. Most everyone has some on-premise servers and a multitude of virtual machines. Managing all of those servers is difficult and usually involves extensive use of un-documented tribal knowledge to set these servers up or to duplicate these servers for another environment. Ansible automates away these tasks of setting up a server.
+
+Ansible simplifies server provisioning, preparing the server for use, by allowing tasks to be scripted and source controlled. Server configuration is also kept in source control and encrypted. These Ansible scripts, or "playbooks", not only automate server setup, they now become the documentation of that server. In this session, I will give an introduction of Ansible from the ground up and each topic will show its effects on a server. No prior knowledge about Ansible is assumed. You will walk away with an understanding of how to do basic tasks with Ansible and when to use Ansible.

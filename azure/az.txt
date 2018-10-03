@@ -1,0 +1,7 @@
+az login
+az group create --name Ansible --location eastus
+az vm create --resource-group Ansible --size Standard_B1s --public-ip-address-dns-name ansiblevm1 --admin-username daniel --name ansiblevm1 --image UbuntuLTS --generate-ssh-keys --verbose 
+az vm create --resource-group Ansible --size Standard_B1s --public-ip-address-dns-name ansiblevm2 --admin-username daniel --name ansiblevm2 --image UbuntuLTS --generate-ssh-keys --verbose
+az vm create --resource-group Ansible --size Standard_B1s --public-ip-address-dns-name ansiblevm3 --admin-username daniel --name ansiblevm3 --image UbuntuLTS --generate-ssh-keys --verbose 
+
+az network public-ip list --query '[].{IPAddress: ipAddress, FQDN: dnsSettings.fqdn}'
