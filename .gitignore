@@ -70,3 +70,4 @@ test/vagrant-spec/boxes/*.box
 vagrant/.vagrant/machines/default/virtualbox/index_uuid
 
 build/
+*.retry

@@ -67,7 +67,7 @@
                 <h3>and</h3>
                 <h1>Provisioning</h1>
                 <h2>with Ansible</h2>
-                <h4>Daniel Oliver</h4>
+                <h4 style="color: rgba(30, 30, 30, 1);">Daniel Oliver</h4>
             </section>
 
 
@@ -320,15 +320,8 @@ ansiblevm3   ansible_ssh_user=daniel   ansible_host=ansiblevm3.eastus.cloudapp.a
                 <h3>Ad-Hoc Command Explained - Part 3.</h3>
                 <pre class="bash"><code style="max-height:100%" data-trim data-noescape>$ ansible all -m ping</code></pre>
                 <p>Ansible configuration is simple to start with.</p>
-                <pre class="ini"><code data-trim data-noescape>[ssh_connection]
-ssh_args = -i "/mnt/c/Users/Daniel/.ssh/id_rsa"
-
-[defaults]
-inventory = hosts
-host_key_checking = False</code></pre>
-                <p>
-                    <i>Note: "host_key_checking = False" may not be a great idea.</i>
-                </p>
+                <pre class="ini"><code data-trim data-noescape>[defaults]
+inventory = hosts</code></pre>
                 <aside class="notes">
                     Configuration is fairly simple.
                     <br/> Now you've probably noticed something here. This is agentless and I'm running it on my computer.
@@ -403,9 +396,9 @@ ansiblevm3 | SUCCESS => {
 - hosts: all  # The servers from the inventory.
   tasks: 
     # Idempotent Task.
-    - name: Make sure that apt-get dotnet-sdk-2.1.4 is present.
+    - name: Make sure that apt-get dotnet-sdk-2.1 is present.
       apt:
-        name: dotnet-sdk-2.1.4
+        name: dotnet-sdk-2.1
         state: present
 
     # Non-Idempotent Task.
@@ -422,27 +415,32 @@ ansiblevm3 | SUCCESS => {
             <section>
                 <h3>Example Ansible Playbook Run</h3>
                 <pre class="bash"><code style="max-height:100%" data-trim data-noescape>$ ansible-playbook -s dotnet-playbook.yml
-PLAY [all] *************************************************************************************************************************************************************************
-TASK [Gathering Facts] *************************************************************************************************************************************************************
-ok: [ansiblevm1]
+PLAY [ansiblevm2] *******************************************************************************************************************************************
 
-TASK [Is Microsoft.gpg there?] *****************************************************************************************************************************************************
-ok: [ansiblevm1]
+TASK [Gathering Facts] **************************************************************************************************************************************
+ok: [ansiblevm2]
 
-TASK [Download Microsoft GPG] ******************************************************************************************************************************************************
-skipping: [ansiblevm1]
+TASK [Check if dotnet-sdk is installed] *********************************************************************************************************************
+ok: [ansiblevm2]
 
-TASK [Microsoft Packages is in source list.] ***************************************************************************************************************************************
-ok: [ansiblevm1]
+TASK [Download Microsoft deb] *******************************************************************************************************************************
+ok: [ansiblevm2]
 
-TASK [Runs apt-get update, if last run more than one hour ago.] ********************************************************************************************************************
-ok: [ansiblevm1]
+TASK [Install Microsoft deb] ********************************************************************************************************************************
+    [WARNING]: Consider using 'become', 'become_method', and 'become_user' rather than running sudo
+changed: [ansiblevm2]
 
-TASK [dotnet-sdk-2.1.4 is present.] ************************************************************************************************************************************************
-ok: [ansiblevm1]
+TASK [apt-transport-https is up-to-date.] *******************************************************************************************************************
+ok: [ansiblevm2]
 
-PLAY RECAP *************************************************************************************************************************************************************************
-ansiblevm1                 : ok=5    changed=0    unreachable=0    failed=0</code></pre>
+TASK [Runs apt-get update, if last run more than one hour ago.] *********************************************************************************************
+ok: [ansiblevm2]
+
+TASK [dotnet-sdk-2.1 is present.] ***************************************************************************************************************************
+changed: [ansiblevm2]
+
+PLAY RECAP **************************************************************************************************************************************************
+ansiblevm2                 : ok=7    changed=2    unreachable=0    failed=0</code></pre>
                 <aside class="notes">
                     This playbook was run with just one Server.
                     <br/> These are the steps to install .NET Core on Ubuntu 16.04.
@@ -454,26 +452,28 @@ ansiblevm1                 : ok=5    changed=0    unreachable=0    failed=0</cod
                 <pre class="yaml"><code style="max-height:100%" data-trim data-noescape>---
 - hosts: ansiblevm1
   tasks:
-  - name: Is Microsoft.gpg there?
-    stat: 
-      path: /etc/apt/trusted.gpg.d/microsoft.gpg
-    register: microsoft_gpg
-  - name: Download Microsoft GPG
-    command: bash -c "curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /etc/apt/trusted.gpg.d/microsoft.gpg"
-    when: microsoft_gpg.stat.exists == False        
-  - name: Microsoft Packages is in source list.
-    lineinfile:
-      path: /etc/apt/sources.list.d/dotnetdev.list
-      line: "deb [arch=amd64] https://packages.microsoft.com/repos/microsoft-ubuntu-xenial-prod xenial main"
+  - name: Check if dotnet-sdk is installed
+    shell: dpkg-query -W -f='${Status}' dotnet-sdk-2.1
+    register: is_installed
+  - name: Download Microsoft deb
+    get_url:
+      url: https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb
+      dest: /tmp/packages-microsoft-prod.deb
+    when: is_installed.rc != 0        
+  - name: Install Microsoft deb
+    command: sudo dpkg -i /tmp/packages-microsoft-prod.deb
+    when: is_installed.rc != 0
+  - name: apt-transport-https is up-to-date.
+    apt:
+      name: apt-transport-https
       state: present
-      create: yes
   - name: Runs apt-get update, if last run more than one hour ago.
     apt: 
       update_cache: yes
       cache_valid_time: 3600
-  - name: dotnet-sdk-2.1.4 is present.
+  - name: dotnet-sdk-2.1 is present.
     apt:
-      name: dotnet-sdk-2.1.4
+      name: dotnet-sdk-2.1
       state: present</code></pre>
                 <aside class="notes">
                     There's a lot going on here. I removed whitespace so it fits on the screen.
@@ -507,14 +507,14 @@ ansiblevm1                 : ok=5    changed=0    unreachable=0    failed=0</cod
                     <br/> Checking dotnet version with ad-hoc commands shows this:
                 </p>
                 <pre class="bash"><code style="max-height:100%" data-trim data-noescape>$ ansible all -m shell -a "dotnet --version"
-ansiblevm1 | SUCCESS | rc=0 >>
-2.1.4
+ansiblevm1 | CHANGED | rc=0 >>
+2.1.403
 
-ansiblevm3 | SUCCESS | rc=0 >>
-2.1.4
+ansiblevm2 | CHANGED | rc=0 >>
+2.1.403
 
-ansiblevm2 | SUCCESS | rc=0 >>
-2.1.4</code></pre>
+ansiblevm3 | CHANGED | rc=0 >>
+2.1.403</code></pre>
                 <p>Ad-hoc commands are useful for gathering information on existing servers.
                 </p>
                 <aside class="notes">
@@ -587,6 +587,18 @@ ansiblevm2 is the name of this server in the inventory file
                     Environment configuration is a mix of lines in files, templated files, and absence of files in other places.
                 </aside>
             </section>
+            
+            <section>
+                <h2>Configuration Process</h2>
+                <ol>
+                    <li>Get environment configurations from source control.</li>
+                    <li>Get specific keys/passwords from an admin or a secret manager.</li>
+                    <li>Transform config files and upload to server.</li>
+                </ol>
+                <aside class="notes">
+                    Placing environment variables in appropriate spots is rarely as difficult as the process of gathering the info from everywhere.
+                </aside>
+            </section>
 
             <section>
                 <h2>Environments</h2>
@@ -611,9 +623,8 @@ ansiblevm3   ansible_ssh_user=daniel   ansible_host=ansiblevm3.eastus.cloudapp.a
                 <p>Configuration variables usually hold sensitive information: passwords, keys.
                     <br/> Ansible-Vault can help protect variables in source control.
                 </p>
-                <img data-src="assets/ansiblevault.gif" height="948" width="1649">
                 <aside class="notes">
-                    The recording there is a little small. What's happening here is that a YAML file is being encrypted.
+                    Having said that, I don't recommend it for passwords or keys. I don't like passwords in my source control repository in any form.
                 </aside>
             </section>
 
@@ -624,6 +635,52 @@ ansiblevm3   ansible_ssh_user=daniel   ansible_host=ansiblevm3.eastus.cloudapp.a
                 <p>How variables are organized can be flexible, and will depend upon your organization.</p>
                 <aside class="notes">
                     All the ways to configure variables in Ansible is a complex topic and varies based upon your use.
+                </aside>
+            </section>
+            
+            <!-- BEGIN SERVER CONFIGURATION -->
+
+            <section data-background="#eAeAeA">
+                <h1>Server Provisioning Bonus</h1>
+                <p>Creating VM from Ansible</p>
+                <aside class="notes">
+                    So far I've shown how to use Ansible to setup applications and briefly on variables.
+                </aside>
+            </section>
+
+            <section>
+                <h3>Azure VM Creation</h3>
+                <pre class="yaml"><code style="max-height:100%" data-trim data-noescape>---
+- name: Create Azure VM
+  hosts: localhost
+  connection: local
+  tasks:
+  - name: Create resource group ...
+  - name: Create virtual network ...
+  - name: Add subnet ...
+  - name: Create public IP address ...
+  - name: Dump public IP for VM which will be created ...
+  - name: Create Network Security Group that allows SSH ...
+  - name: Create virtual network inteface card ...
+  - name: Create VM
+    azure_rm_virtualmachine:
+      resource_group: myResourceGroup
+      name: myVM
+      vm_size: Standard_B1s
+      admin_username: azureuser
+      ssh_password_enabled: false
+      ssh_public_keys:
+        - path: /home/azureuser/.ssh/authorized_keys
+          key_data: ssh-rsa AAAAB3NzaC1yc2...
+      network_interfaces: myNIC
+      image:
+        offer: CentOS
+        publisher: OpenLogic
+        sku: '7.5'
+        version: latest</code></pre>
+                <aside class="notes">
+                    There's a lot going on here. I removed whitespace so it fits on the screen.
+                    <br/> Notice the bash commands.
                 </aside>
             </section>
 
@@ -695,10 +752,11 @@ ansiblevm3   ansible_ssh_user=daniel   ansible_host=ansiblevm3.eastus.cloudapp.a
 
             <section data-background="#333333">
                 <h1>Daniel Oliver</h1>
+                <p>Microsoft MVP</p>
                 <p>Website: olivercoding.com</p>
                 <p>Twitter: @a_software_dev</p>
                 <p>Github: danieloliver</p>
-                <p>Slides: https://ansible.olivercoding.com/</p>
+                <p>Slides: https://ansible2.olivercoding.com/</p>
                 <img style="background-color: rgba(255, 255, 255, 0); border:none; box-shadow: 0 0 0 rgba(0,0,0,0);" data-src="assets/Asset_7.png">
                 <aside class="notes">
                     Radio Systems Corporation of Knoxville is my employer. I focus on solutions.
